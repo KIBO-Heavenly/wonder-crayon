@@ -1,0 +1,2 @@
+/* DEMO: Placeholder icon - replace with actual app icon */
+

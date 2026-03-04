@@ -1,0 +1,69 @@
+name: wonder_crayon
+description: "Wonder Crayon - Create magical AI-powered storybooks"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Default icon set
+  cupertino_icons: ^1.0.8
+
+  # 🧩 State management
+  provider: ^6.1.2
+
+  # 💾 Local storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.2
+
+  # 🌐 For API / AI connections
+  http: ^1.2.1
+
+  # 📶 Internet connectivity checking
+  connectivity_plus: ^6.0.3
+
+  # UI/Aesthetics
+  animated_background: ^2.0.0
+  google_fonts: ^6.3.2
+
+  # Unique IDs
+  uuid: ^4.4.0
+
+  # 🔥 Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+  # 🛠️ REQUIRED for Hive Code Generation
+  build_runner: ^2.4.9
+  hive_generator: ^2.0.1
+
+  # App icon generator
+  flutter_launcher_icons: ^0.14.2
+
+# App Icon Configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/Wonder_Crayon_LOGO.jpg"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/Wonder_Crayon_LOGO.jpg"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/Wonder_Crayon_LOGO.jpg

@@ -1,0 +1,125 @@
+# ============================================================================
+# Wonder Crayon — Build & Deploy to GitHub Pages
+# ============================================================================
+# Triggers on push to main. Builds Flutter web and deploys to GitHub Pages.
+#
+# REQUIRED SETUP (one-time):
+#   1. Go to your repo → Settings → Pages → Source → "GitHub Actions"
+#   2. Go to Settings → Secrets and variables → Actions
+#   3. Add these Repository Secrets:
+#        POLLINATIONS_KEY       →  pk_your_real_key
+#        HF_TOKEN               →  hf_your_real_token
+#        FIREBASE_WEB_API_KEY   →  your Firebase web API key
+#        FIREBASE_WEB_APP_ID    →  your Firebase web app ID
+# ============================================================================
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐦 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Install dependencies
+        run: flutter pub get
+
+      - name: 🔥 Generate firebase_options.dart from secrets
+        run: |
+          cat > lib/firebase_options.dart << 'DART_EOF'
+          import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+          import 'package:flutter/foundation.dart'
+              show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform {
+              if (kIsWeb) return web;
+              switch (defaultTargetPlatform) {
+                case TargetPlatform.android: return android;
+                case TargetPlatform.iOS:     return ios;
+                default:
+                  throw UnsupportedError('Platform not supported');
+              }
+            }
+
+            static const FirebaseOptions web = FirebaseOptions(
+              apiKey:            'PLACEHOLDER_WEB_KEY',
+              appId:             'PLACEHOLDER_WEB_APP_ID',
+              messagingSenderId: '44831723922',
+              projectId:         'wonder-crayon',
+              storageBucket:     'wonder-crayon.firebasestorage.app',
+              authDomain:        'wonder-crayon.firebaseapp.com',
+            );
+
+            static const FirebaseOptions android = FirebaseOptions(
+              apiKey:            'PLACEHOLDER_ANDROID_KEY',
+              appId:             'PLACEHOLDER_ANDROID_APP_ID',
+              messagingSenderId: '44831723922',
+              projectId:         'wonder-crayon',
+              storageBucket:     'wonder-crayon.firebasestorage.app',
+            );
+
+            static const FirebaseOptions ios = FirebaseOptions(
+              apiKey:            'PLACEHOLDER_IOS_KEY',
+              appId:             'PLACEHOLDER_IOS_APP_ID',
+              messagingSenderId: '44831723922',
+              projectId:         'wonder-crayon',
+              storageBucket:     'wonder-crayon.firebasestorage.app',
+              iosBundleId:       'com.example.wonderCrayon',
+            );
+          }
+          DART_EOF
+          # Now substitute the real secrets into the generated file
+          sed -i "s|PLACEHOLDER_WEB_KEY|${{ secrets.FIREBASE_WEB_API_KEY }}|g" lib/firebase_options.dart
+          sed -i "s|PLACEHOLDER_WEB_APP_ID|${{ secrets.FIREBASE_WEB_APP_ID }}|g" lib/firebase_options.dart
+          sed -i "s|PLACEHOLDER_ANDROID_KEY|${{ secrets.FIREBASE_WEB_API_KEY }}|g" lib/firebase_options.dart
+          sed -i "s|PLACEHOLDER_ANDROID_APP_ID|${{ secrets.FIREBASE_WEB_APP_ID }}|g" lib/firebase_options.dart
+
+      - name: 🔍 Analyze code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: 🏗️ Build Flutter Web
+        run: |
+          flutter build web --release \
+            --base-href "/wonder-crayon/" \
+            --dart-define=POLLINATIONS_KEY=${{ secrets.POLLINATIONS_KEY }} \
+            --dart-define=HF_TOKEN=${{ secrets.HF_TOKEN }}
+
+      - name: 📄 Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
