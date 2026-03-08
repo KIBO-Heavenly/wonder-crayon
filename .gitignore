@@ -18,10 +18,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# launch.json contains local dart-define secrets — never commit it
+.vscode/launch.json
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -45,6 +43,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# ── Large binary assets (video) — host externally or use Git LFS ─────────────
+*.mp4
+
 # ── Sensitive / Environment files ────────────────────────────────────────────
 *.env
 .env*
@@ -55,7 +56,11 @@ android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 
+# Android local config (contains machine-specific SDK paths)
+android/local.properties
+
 # Local IDE / OS
+.vscode/
 *.swo
 Thumbs.db
 

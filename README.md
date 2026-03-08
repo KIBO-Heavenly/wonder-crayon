@@ -206,7 +206,8 @@ service cloud.firestore {
 
 ## 📄 License
 
-This project is for educational and portfolio purposes.
+Copyright © 2025-2026 Wonder Crayon. All rights reserved.
+This project is for **educational and portfolio purposes only**. See [LICENSE](LICENSE) for details.
 
 ---
 

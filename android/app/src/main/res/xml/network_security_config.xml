@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Config for Wonder Crayon
+  Ensures TLS connections to Pollinations.ai and HuggingFace work correctly
+  on Android 7.0+ (API 24+), which uses stricter certificate trust rules.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust the standard system CAs (covers Cloudflare, Let's Encrypt, etc.) -->
+            <certificates src="system" />
+            <!-- Also trust user-installed CAs (useful during development/debugging) -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Pollinations.ai endpoints -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">pollinations.ai</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- HuggingFace fallback -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">huggingface.co</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

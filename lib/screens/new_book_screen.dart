@@ -1,13 +1,14 @@
 // ============================================================================
-// New Book Screen — with live debug log panel and onLog callback wired up
+// New Book Screen — with dance video loading overlay and console-only logging
 // ============================================================================
 
 import 'dart:async';
-import 'package:flutter/services.dart';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:animated_background/animated_background.dart';
+import 'package:video_player/video_player.dart';
 import '../providers/book_provider.dart';
 import '../providers/settings_provider.dart';
 import '../helpers/pollinations_ai.dart';
@@ -36,10 +37,8 @@ class _NewBookScreenState extends State<NewBookScreen>
   String _selectedArtStyle = 'Watercolor';
   bool _useCustomPageText = false;
 
-  // Live debug log shown inside the loading overlay so you can see
-  // exactly what's happening without opening Chrome DevTools.
-  final List<String> _debugLogs = [];
-  final ScrollController _logScrollController = ScrollController();
+  // Video controller for the loading dance video
+  VideoPlayerController? _videoController;
 
   final List<String> _artStyles = [
     'Watercolor',
@@ -69,22 +68,10 @@ class _NewBookScreenState extends State<NewBookScreen>
   }
 
   // Called by PollinationsAI for every log message.
-  // Adds to the visible list and auto-scrolls to bottom.
+  // Outputs to the debug console only.
   void _addLog(String msg) {
-    if (!mounted) return;
-    setState(() {
-      _debugLogs.add(msg);
-    });
-    // Auto-scroll to latest log entry
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_logScrollController.hasClients) {
-        _logScrollController.animateTo(
-          _logScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    debugPrint('[WonderCrayon] $msg');
+    developer.log(msg, name: 'WonderCrayon');
   }
 
   @override
@@ -92,7 +79,7 @@ class _NewBookScreenState extends State<NewBookScreen>
     _titleController.dispose();
     _authorController.dispose();
     _promptController.dispose();
-    _logScrollController.dispose();
+    _videoController?.dispose();
     for (var c in _pageControllers) {
       c.dispose();
     }
@@ -496,202 +483,102 @@ class _NewBookScreenState extends State<NewBookScreen>
             ),
           ),
 
-          // ── Loading overlay with live debug log ────────────────────────────
+          // ── Loading overlay with dance video ────────────────────────────
           if (_isGenerating)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withValues(alpha: 0.92),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Crafting your story…',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                color: Colors.black,
+                child: Stack(
+                  children: [
+                    // ── Video background layer ──────────────────────────
+                    if (_videoController != null &&
+                        _videoController!.value.isInitialized)
+                      Positioned.fill(
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: _videoController!.value.size.width,
+                            height: _videoController!.value.size.height,
+                            child: VideoPlayer(_videoController!),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                      ),
 
-                        // Progress bar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: _progress > 0 ? _progress : null,
-                            minHeight: 8,
-                            backgroundColor: Colors.white12,
-                            valueColor: const AlwaysStoppedAnimation(
-                                Color(0xFF667eea)),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Status line
-                        Text(
-                          _generatingStatus,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'This can take 2–8 minutes. Your story is worth the wait! ✨',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Live debug log panel
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF667eea)
-                                    .withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Panel header
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF667eea)
-                                        .withValues(alpha: 0.2),
-                                    borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(11)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.terminal,
-                                          color: Color(0xFF667eea), size: 14),
-                                      const SizedBox(width: 6),
-                                      const Text(
-                                        'Live Log',
-                                        style: TextStyle(
-                                          color: Color(0xFF667eea),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        '${_debugLogs.length} messages',
-                                        style: TextStyle(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.4),
-                                          fontSize: 11,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      GestureDetector(
-                                        onTap: () async {
-                                          final text = _debugLogs.join('\n');
-                                          await Clipboard.setData(
-                                              ClipboardData(text: text));
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  '✅ Logs copied to clipboard!'),
-                                              duration: Duration(seconds: 2),
-                                              backgroundColor:
-                                              Color(0xFF00B894),
-                                            ));
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF667eea)
-                                                .withValues(alpha: 0.3),
-                                            borderRadius:
-                                            BorderRadius.circular(6),
-                                          ),
-                                          child: const Text(
-                                            'Copy',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // Scrollable log entries
-                                Expanded(
-                                  child: ListView.builder(
-                                    controller: _logScrollController,
-                                    padding: const EdgeInsets.all(10),
-                                    itemCount: _debugLogs.length,
-                                    itemBuilder: (context, index) {
-                                      final msg = _debugLogs[index];
-                                      // Color-code by prefix
-                                      Color msgColor = Colors.white70;
-                                      if (msg.startsWith('✅')) {
-                                        msgColor = const Color(0xFF00B894);
-                                      } else if (msg.startsWith('❌') ||
-                                          msg.contains('failed') ||
-                                          msg.contains('exception')) {
-                                        msgColor = const Color(0xFFE17055);
-                                      } else if (msg.startsWith('⚠️')) {
-                                        msgColor = const Color(0xFFfdcb6e);
-                                      } else if (msg.startsWith('⏳')) {
-                                        msgColor = const Color(0xFF74b9ff);
-                                      }
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                            bottom: 3),
-                                        child: Text(
-                                          msg,
-                                          style: TextStyle(
-                                            color: msgColor,
-                                            fontSize: 11,
-                                            fontFamily: 'monospace',
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Also visible in Chrome DevTools → Console (F12)',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
+                    // ── Semi-transparent scrim so text is readable ──────
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.45),
+                      ),
                     ),
-                  ),
+
+                    // ── Progress bar & status text on top ───────────────
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Crafting your story…',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Progress bar
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  value: _progress > 0 ? _progress : null,
+                                  minHeight: 8,
+                                  backgroundColor: Colors.white12,
+                                  valueColor: const AlwaysStoppedAnimation(
+                                      Color(0xFF667eea)),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Status line
+                              Text(
+                                _generatingStatus,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'This can take 1–4 minutes depending on pages. Worth the wait! ✨',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Check console (F12) for live logs',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -707,11 +594,24 @@ class _NewBookScreenState extends State<NewBookScreen>
   Future<void> _generateBook() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Initialize and start the dance video (non-blocking — don't let
+    // a video error prevent book generation)
+    _videoController = VideoPlayerController.asset(
+      'assets/wonder_crayon_dance.mp4',
+    );
+    try {
+      await _videoController!.initialize();
+      _videoController!.setLooping(true);
+      _videoController!.setVolume(0); // mute so it's not jarring
+      _videoController!.play();
+    } catch (e) {
+      debugPrint('[WonderCrayon] Video init error (non-fatal): $e');
+    }
+
     setState(() {
       _isGenerating = true;
       _generatingStatus = 'Starting up the magic…';
       _progress = 0;
-      _debugLogs.clear();
     });
 
     try {
@@ -771,13 +671,21 @@ class _NewBookScreenState extends State<NewBookScreen>
         });
       }
 
-      // Generate all images
+      // Generate images — authenticated users (with POLLINATIONS_KEY) get
+      // better rate limits than anonymous. 3s between requests is safe.
+      int fallbackCount = 0;
       for (int i = 0; i < pages.length; i++) {
         setState(() {
           _generatingStatus =
-          'Painting illustration ${i + 1} of ${pages.length}…';
+              'Painting illustration ${i + 1} of ${pages.length}…';
           _progress = 0.15 + (i + 1) / pages.length * 0.85;
         });
+
+        // Brief pause before EVERY request (including the first) so we never
+        // fire immediately after the previous network call finishes.
+        if (i > 0) {
+          await Future.delayed(const Duration(seconds: 3));
+        }
 
         try {
           final imageBase64 = await pollinationsAI.generateImage(
@@ -788,15 +696,21 @@ class _NewBookScreenState extends State<NewBookScreen>
             onLog: _addLog,
           );
           pages[i].imagePath = imageBase64;
-          pages[i].isImageGenerated = true;
+          if (isFallbackImage(imageBase64)) {
+            pages[i].isImageGenerated = false;
+            fallbackCount++;
+          } else {
+            pages[i].isImageGenerated = true;
+          }
         } catch (e) {
           _addLog('❌ Image ${i + 1} exception: $e');
+          fallbackCount++;
         }
       }
 
       String coverImage = '';
       for (var p in pages) {
-        if (p.isImageGenerated && p.imagePath.isNotEmpty) {
+        if (p.isImageGenerated && p.imagePath.isNotEmpty && !isFallbackImage(p.imagePath)) {
           coverImage = p.imagePath;
           break;
         }
@@ -819,6 +733,18 @@ class _NewBookScreenState extends State<NewBookScreen>
       await bookProvider.addBook(newBook);
 
       if (mounted) {
+        if (fallbackCount > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '$fallbackCount image(s) couldn\'t be generated. '
+                'Check your connection and try again.',
+              ),
+              duration: const Duration(seconds: 4),
+              backgroundColor: const Color(0xFFE17055),
+            ),
+          );
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -834,6 +760,8 @@ class _NewBookScreenState extends State<NewBookScreen>
         );
       }
     } finally {
+      _videoController?.dispose();
+      _videoController = null;
       if (mounted) {
         setState(() => _isGenerating = false);
       }

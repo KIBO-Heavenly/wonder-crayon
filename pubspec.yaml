@@ -1,6 +1,7 @@
 name: wonder_crayon
 description: "Wonder Crayon - Create magical AI-powered storybooks"
 publish_to: 'none'
+repository: https://github.com/KIBO-Heavenly/wonder-crayon
 
 version: 1.0.0+1
 
@@ -31,6 +32,9 @@ dependencies:
   # UI/Aesthetics
   animated_background: ^2.0.0
   google_fonts: ^6.3.2
+
+  # 🎬 Video playback
+  video_player: ^2.9.2
 
   # Unique IDs
   uuid: ^4.4.0
@@ -67,3 +71,4 @@ flutter:
   assets:
     - assets/
     - assets/Wonder_Crayon_LOGO.jpg
+    - assets/wonder_crayon_dance.mp4
