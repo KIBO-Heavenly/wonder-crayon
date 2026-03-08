@@ -43,8 +43,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# ── Large binary assets (video) — host externally or use Git LFS ─────────────
-*.mp4
 
 # ── Sensitive / Environment files ────────────────────────────────────────────
 *.env
